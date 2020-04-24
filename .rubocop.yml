@@ -1,0 +1,15 @@
+# inherit_from: ../.rubocop.yml
+
+AllCops:
+  Exclude:
+    - 'bin/**/*'
+
+Style/Encoding:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 99
+
+Metrics/BlockLength:
+  Enabled: false
+
