@@ -7,7 +7,7 @@ I did start ~13:00
 
 Break (dinner) - 14:30 - 15:30
  - Reading about vending machine problem - 0.5h
- - Implementing get_return_coins - 1h
+ - Implementing get_return - 1h
  - Tests - 1h
  - Final improvements - 0.5h
 
@@ -47,7 +47,7 @@ Setting THRESHOLD will be good idea.
 If VendingMachine already contain item it will increase quantity
 else add item to list.
 ```ruby
-items = [{code: 1, name: 'Snikers', quantity: 5, price: 99}]
+items = [{ code: 1, name: 'Snikers', quantity: 5, price: 99 }]
 
 vending_machine.add_items(items)
 ```
@@ -58,7 +58,7 @@ vending_machine.add_items(items)
  - value = quantity
 ```ruby
 # old syntax because key is integer
-money = { 1 => 11, 2 => 22, 5 => 55, 10 => 111, 20 => 222, 50 => 555, 100 => 1111, 200 => 2222}
+money = { 1 => 11, 2 => 22, 5 => 55, 10 => 111, 20 => 222, 50 => 555, 100 => 1111, 200 => 2222 }
 
 vending_machine.add_money(money)
 ```

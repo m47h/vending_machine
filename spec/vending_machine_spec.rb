@@ -72,14 +72,14 @@ RSpec.describe VendingMachine do
         vending_machine.insert_coin(100)
         vending_machine.purchase(1)
 
-        expect(vending_machine.money[100]).to eq 1
+        expect(vending_machine.coin_stack[100]).to eq 1
       end
 
       it 'after purchase money is correct' do
         vending_machine.insert_coin(100)
         vending_machine.purchase(1)
 
-        expect(vending_machine.money).to eq(1 => 2, 2 => 3, 5 => 5, 100 => 1)
+        expect(vending_machine.coin_stack.to_h).to eq(1 => 2, 2 => 3, 5 => 5, 100 => 1)
       end
     end
   end
@@ -89,21 +89,21 @@ RSpec.describe VendingMachine do
       new_money = nil
       vending_machine.add_money(new_money)
 
-      expect(vending_machine.money).to eq(money)
+      expect(vending_machine.coin_stack.to_h).to eq(money)
     end
 
     it 'increase quantity' do
       new_money = { 1 => 5, 5 => 5, 10 => 3, 200 => 1 }
       vending_machine.add_money(new_money)
 
-      expect(vending_machine.money).to eq(1 => 7, 2 => 3, 5 => 10, 10 => 3, 200 => 1)
+      expect(vending_machine.coin_stack.to_h).to eq(1 => 7, 2 => 3, 5 => 10, 10 => 3, 200 => 1)
     end
 
     it 'invalid coins are skipped' do
       new_money = { 7 => 3, 15 => 1 }
       vending_machine.add_money(new_money)
 
-      expect(vending_machine.money).to eq(money)
+      expect(vending_machine.coin_stack.to_h).to eq(money)
     end
   end
 
@@ -130,7 +130,7 @@ RSpec.describe VendingMachine do
     end
   end
 
-  context 'check if #get_return_coins' do
+  context 'check if #get_return' do
     attempts = [
       { price: 90, inserted_coins: [100], return_coins: { 5 => 2 } },
       { price: 2, inserted_coins: [10], return_coins: { 5 => 1, 2 => 1, 1 => 1 } },
@@ -156,13 +156,14 @@ RSpec.describe VendingMachine do
     attempts.each do |attempt|
       it "return correct amount of coins for Item_#{attempt[:price]}" do
         vending_machine.add_items([
-          code: 2, name: "Item_#{attempt[:price]}", quantity: 5, price: attempt[:price]
-        ])
+                                    code: 2, name: "Item_#{attempt[:price]}", quantity: 5, price: attempt[:price]
+                                  ])
         vending_machine.add_money(attempt[:add_money])
         attempt[:inserted_coins].each { |coin| vending_machine.insert_coin(coin) }
+        return_coins = CoinStack.new(attempt[:return_coins])
 
         expect(vending_machine.purchase(2))
-          .to eq "Please take your: Item_#{attempt[:price]} and #{coins_text(attempt[:return_coins])} change."
+          .to eq "Please take your: Item_#{attempt[:price]} and #{coins_text(return_coins)} change."
       end
     end
 
@@ -179,8 +180,9 @@ RSpec.describe VendingMachine do
 
       it 'leave in in machine is last inserted coin' do
         vending_machine.purchase(2)
+        # binding.pry
 
-        expect(vending_machine.money).to eq(200 => 1)
+        expect(vending_machine.coin_stack.to_h).to eq(200 => 1)
       end
     end
   end
@@ -193,7 +195,7 @@ RSpec.describe VendingMachine do
       vending_machine.insert_coin(10)
 
       expect { vending_machine.purchase(1) }
-        .to change { vending_machine.inserted_coins }
+        .to change { vending_machine.inserted_coins.to_h }
         .from(50 => 1, 20 => 2, 10 => 1).to({})
     end
   end
