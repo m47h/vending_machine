@@ -150,6 +150,11 @@ RSpec.describe VendingMachine do
         price: 164,
         inserted_coins: [200, 100, 50, 50],
         return_coins: { 200 => 1, 5 => 5, 2 => 3, 1 => 2 }
+      },
+      {
+        price: 181,
+        inserted_coins: [200, 200],
+        return_coins: { 200 => 1, 5 => 3, 2 => 2 }
       }
     ]
 

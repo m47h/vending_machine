@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require_relative 'coin_stack'
+require 'tty-box'
+require 'tty-screen'
+require 'pry'
 
 class VendingMachine
   attr_reader :items, :coin_stack, :inserted_coins
@@ -56,7 +59,52 @@ class VendingMachine
     end
   end
 
+  def run
+    while true
+      output ||= ''
+      box { "#{output}" }
+      button = gets.rstrip.chomp
+
+      output = case button
+      when 'I', 'i'
+        box { "Insert coin: #{Coin::VALID_DENOMINATION}" }
+        action = gets.to_i
+        insert_coin(action)
+      when 'B', 'b'
+        box { [
+            "Items: #{items.map { |i| "#{i[:name]} code: #{i[:code]}, price: #{i[:price]}" }.join(', ') }",
+
+            "Enter code:"
+          ] }
+        action = gets.to_i
+        purchase(action)
+      when 'S', 's'
+        box { 'Bye! Bye!' }
+        return
+      end
+    end
+  end
+
+  def box(&block)
+    text = [
+      "Vending Machine",
+      "You have insert £#{inserted_coins.sum.to_f / 100}",
+      "I,i = Insert Coin",
+      "B,b = Buy Item",
+      "S,s = Stop Machine",
+    ]
+
+    text << "" << yield if block_given?
+
+    print TTY::Box.frame(
+      text.join("\n"),
+      width: TTY::Screen.width,
+      height: TTY::Screen.height
+    )
+  end
+
   private
+
 
   def save_inserted_coins
     coin_stack + inserted_coins
@@ -73,3 +121,8 @@ class VendingMachine
     coins.map(&:to_s).join(' + ')
   end
 end
+
+money = { 1 => 2, 2 => 3, 5 => 5 }
+items = [{ code: 1, name: 'Snacks', quantity: 5, price: 100 }]
+vending_machine = VendingMachine.new(items, money)
+vending_machine.run
