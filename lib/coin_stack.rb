@@ -68,9 +68,12 @@ class CoinStack
     return 'Please add coins' if quantity.negative?
     return 'Coin invalid' unless Coin.valid?(denomination)
 
-    return self[denomination] + quantity if self[denomination]
-
-    @stack << Coin.new(denomination, quantity)
+    if self[denomination]
+      self[denomination] + quantity
+    else
+      @stack << Coin.new(denomination, quantity)
+    end
+    'Coin added'
   end
 
   def inspect
@@ -81,9 +84,9 @@ class CoinStack
     # select denomination smaller or equal change
     # sort descending by denomination
     coins = @stack
-            .select { |coin| coin.denomination <= change && coin.quantity.positive? }
-            .sort.reverse
-            .map!(&:dup) # count on current stack but dont change it
+              .select { |coin| coin.denomination <= change && coin.quantity.positive? }
+              .sort.reverse
+              .map!(&:dup) # count on current stack but dont change it
 
     unless coins.empty?
       min_return_coins = minimal_coins_to_change(change, coins)

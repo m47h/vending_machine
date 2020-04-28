@@ -1,17 +1,4 @@
-# VendingMachine - Technical Exercise - Option 2
-At the beginning I just want to mention, that i heard first time about vending machine problem during that technical exercise (thanks for that!). I don't know if result is what You have expected, so i can make improvements if needed, according to your suggestions.
-
-I did start ~13:00
- - Getting overall context - 0.3h
- - Implementing class - 1.5h
-
-Break (dinner) - 14:30 - 15:30
- - Reading about vending machine problem - 0.5h
- - Implementing get_return - 1h
- - Tests - 1h
- - Final improvements - 0.5h
-
-#### All ~ 4h50min
+# VendingMachine
 
 #### All money/coins denomination as integers (100 = £1, 1 = 1p)
 

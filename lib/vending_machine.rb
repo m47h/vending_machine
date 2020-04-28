@@ -1,14 +1,13 @@
 # frozen_string_literal: true
 
 require_relative 'coin_stack'
-require 'tty-box'
-require 'tty-screen'
-require 'pry'
+require_relative 'draw_tty'
 
 class VendingMachine
+  include DrawTTY
   attr_reader :items, :coin_stack, :inserted_coins
 
-  def initialize(items, money = {}, coin_stack = CoinStack)
+  def initialize(items, money = { }, coin_stack = CoinStack)
     @items = items
     @coin_stack = coin_stack.new(money)
     @inserted_coins = coin_stack.new
@@ -23,6 +22,7 @@ class VendingMachine
   end
 
   def purchase(code)
+    code = code.rstrip.chomp if code.is_a? String
     return 'Please insert coins' if @inserted_coins.empty?
 
     item = items.find { |i| i[:code] == code }
@@ -62,49 +62,37 @@ class VendingMachine
   def run
     while true
       output ||= ''
-      box { "#{output}" }
+      main_box { "#{output}" }
       button = gets.rstrip.chomp
 
       output = case button
       when 'I', 'i'
-        box { "Insert coin: #{Coin::VALID_DENOMINATION}" }
+        main_box { "Insert coin: #{Coin::VALID_DENOMINATION}" }
         action = gets.to_i
         insert_coin(action)
       when 'B', 'b'
-        box { [
-            "Items: #{items.map { |i| "#{i[:name]} code: #{i[:code]}, price: #{i[:price]}" }.join(', ') }",
-
-            "Enter code:"
-          ] }
-        action = gets.to_i
+        main_box { "Enter code:" }
+        action = gets
         purchase(action)
-      when 'S', 's'
-        box { 'Bye! Bye!' }
+      when 'Q', 'q'
+        main_box { 'Bye! Bye!' }
         return
       end
     end
   end
 
-  def box(&block)
-    text = [
-      "Vending Machine",
-      "You have insert £#{inserted_coins.sum.to_f / 100}",
-      "I,i = Insert Coin",
-      "B,b = Buy Item",
-      "S,s = Stop Machine",
-    ]
-
-    text << "" << yield if block_given?
-
-    print TTY::Box.frame(
-      text.join("\n"),
-      width: TTY::Screen.width,
-      height: TTY::Screen.height
-    )
+  def items_display
+    items.map do |i|
+      [
+        i[:code],
+        "£#{'%.2f' % (i[:price].to_f / 100)}",
+        "#{i[:quantity].to_s.size == 1 ? ' ' + i[:quantity].to_s : i[:quantity]}",
+        i[:name]
+      ].join(' :: ')
+    end.join("\n")
   end
 
   private
-
 
   def save_inserted_coins
     coin_stack + inserted_coins
@@ -121,8 +109,3 @@ class VendingMachine
     coins.map(&:to_s).join(' + ')
   end
 end
-
-money = { 1 => 2, 2 => 3, 5 => 5 }
-items = [{ code: 1, name: 'Snacks', quantity: 5, price: 100 }]
-vending_machine = VendingMachine.new(items, money)
-vending_machine.run
