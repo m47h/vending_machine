@@ -4,9 +4,10 @@ require_relative 'coin'
 
 class CoinStack
   include Enumerable
-  attr_reader :stack
+  attr_reader :stack, :coin_klass
 
-  def initialize(money = {})
+  def initialize(money = {}, coin_klass = Coin)
+    @coin_klass = coin_klass
     @stack = fill_with(money)
   end
 
@@ -31,10 +32,6 @@ class CoinStack
     sum <=> other.sum
   end
 
-  def return_coins(coins)
-    coins.each { |coin| self[coin.denomination] - coin.quantity }
-  end
-
   def drop!
     @stack = []
   end
@@ -52,11 +49,9 @@ class CoinStack
   end
 
   def each(&block)
-    if block_given?
-      @stack.each(&block)
-    else
-      to_enum(:each)
-    end
+    return @stack.each(&block) if block_given?
+
+    to_enum(:each)
   end
 
   def to_h
@@ -66,7 +61,7 @@ class CoinStack
 
   def add(denomination, quantity = 1)
     return 'Please add coins' if quantity.negative?
-    return 'Coin invalid' unless Coin.valid?(denomination)
+    return 'Coin invalid' unless @coin_klass.valid?(denomination)
 
     if self[denomination]
       self[denomination] + quantity
@@ -74,6 +69,10 @@ class CoinStack
       @stack << Coin.new(denomination, quantity)
     end
     'Coin added'
+  end
+
+  def remove(coins)
+    coins&.each { |coin| self[coin.denomination] - coin.quantity }
   end
 
   def inspect
@@ -84,21 +83,26 @@ class CoinStack
     # select denomination smaller or equal change
     # sort descending by denomination
     coins = @stack
-              .select { |coin| coin.denomination <= change && coin.quantity.positive? }
-              .sort.reverse
-              .map!(&:dup) # count on current stack but dont change it
+            .select { |coin| coin.denomination <= change && coin.quantity.positive? }
+            .sort.reverse
+            .map!(&:dup) # count on current stack but dont change it
 
     unless coins.empty?
       min_return_coins = minimal_coins_to_change(change, coins)
-
-      coin = coins.first
-      coin.quantity > 1 ? coin - 1 : coins.delete_if { |c| c.denomination == coin.denomination }
+      coins = remove_first_coin(coins)
     end
+    remove(min_return_coins)
 
     min_return_coins || {}
   end
 
   private
+
+  def remove_first_coin(coins)
+    coin = coins.first
+    coin.quantity > 1 ? coin - 1 : coins.delete_if { |c| c.denomination == coin.denomination }
+    coins
+  end
 
   def minimal_coins_to_change(change, coins)
     return_coins = []
@@ -106,13 +110,11 @@ class CoinStack
     min_return_coins = coins
 
     coins.each do |coin|
-      max_quantity = (change / coin.denomination).to_i
-      return_quantity = [max_quantity, coin.quantity].min
-      next if return_quantity.zero?
+      min_return_quantity = minimal_return_quantity(coin, change)
+      next if min_return_quantity.zero?
 
-      # return_coins[coin.denomination] = return_quantity
-      return_coins << Coin.new(coin.denomination, return_quantity)
-      change -= coin.denomination * return_quantity
+      return_coins << @coin_klass.new(coin.denomination, min_return_quantity)
+      change -= coin.denomination * min_return_quantity
 
       if change < min_change
         min_change = change
@@ -124,9 +126,14 @@ class CoinStack
     min_return_coins
   end
 
+  def minimal_return_quantity(coin, change)
+    max_quantity = (change / coin.denomination).to_i
+    [max_quantity, coin.quantity].min
+  end
+
   def fill_with(money)
     money.map do |denomination, quantity|
-      Coin.new(denomination, quantity) if Coin.valid?(denomination)
+      @coin_klass.new(denomination, quantity) if @coin_klass.valid?(denomination)
     end
   end
 end

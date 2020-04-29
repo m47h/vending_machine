@@ -7,10 +7,10 @@ class VendingMachine
   include DrawTTY
   attr_reader :items, :coin_stack, :inserted_coins
 
-  def initialize(items, money = { }, coin_stack = CoinStack)
+  def initialize(items, money = {}, coin_stack_klass = CoinStack, coin_klass = Coin)
     @items = items
-    @coin_stack = coin_stack.new(money)
-    @inserted_coins = coin_stack.new
+    @coin_stack = coin_stack_klass.new(money, coin_klass)
+    @inserted_coins = coin_stack_klass.new({}, coin_klass)
   end
 
   def money
@@ -34,7 +34,6 @@ class VendingMachine
 
     save_inserted_coins
     return_coins = coin_stack.get_return(change)
-    coin_stack.return_coins(return_coins)
     item[:quantity] -= 1
 
     display_output(item, return_coins)
@@ -62,21 +61,21 @@ class VendingMachine
   def run
     while true
       output ||= ''
-      main_box { "#{output}" }
+      main_box { output.to_s }
       button = gets.rstrip.chomp
 
       output = case button
-      when 'I', 'i'
-        main_box { "Insert coin: #{Coin::VALID_DENOMINATION}" }
-        action = gets.to_i
-        insert_coin(action)
-      when 'B', 'b'
-        main_box { "Enter code:" }
-        action = gets
-        purchase(action)
-      when 'Q', 'q'
-        main_box { 'Bye! Bye!' }
-        return
+               when 'I', 'i'
+                 main_box { "Insert coin: #{coin_stack.coin_klass::VALID_DENOMINATION}" }
+                 action = gets.to_i
+                 insert_coin(action)
+               when 'B', 'b'
+                 main_box { 'Enter code:' }
+                 action = gets
+                 purchase(action)
+               when 'Q', 'q'
+                 main_box { 'Bye! Bye!' }
+                 return
       end
     end
   end
@@ -85,8 +84,8 @@ class VendingMachine
     items.map do |i|
       [
         i[:code],
-        "£#{'%.2f' % (i[:price].to_f / 100)}",
-        "#{i[:quantity].to_s.size == 1 ? ' ' + i[:quantity].to_s : i[:quantity]}",
+        "£#{format('%.2f', (i[:price].to_f / 100))}",
+        (i[:quantity].to_s.size == 1 ? ' ' + i[:quantity].to_s : i[:quantity]).to_s,
         i[:name]
       ].join(' :: ')
     end.join("\n")
