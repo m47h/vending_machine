@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require './lib/vending_machine'
-require 'pry'
 
 RSpec.describe VendingMachine do
   let(:money) { { 1 => 2, 2 => 3, 5 => 5 } }
@@ -132,38 +131,57 @@ RSpec.describe VendingMachine do
 
   context 'check if #get_return' do
     attempts = [
-      { price: 90, inserted_coins: [100], return_coins: { 5 => 2 } },
-      { price: 2, inserted_coins: [10], return_coins: { 5 => 1, 2 => 1, 1 => 1 } },
+      {
+        price: 8,
+        inserted_coins: [20],
+        machine_money: { 5 => 3, 2 => 10, 1 => 5 },
+        return_coins: { 5 => 2, 2 => 1 }
+      },
+      {
+        price: 11,
+        inserted_coins: [20],
+        machine_money: { 10 => 1, 1 => 10 },
+        return_coins: { 1 => 9 }
+      },
+      {
+        price: 65,
+        inserted_coins: [200],
+        machine_money: { 20 => 10, 10 => 5, 5 => 5 },
+        return_coins: { 20 => 6, 10 => 1, 5 => 1 }
+      },
       {
         price: 80,
         inserted_coins: [100, 100],
-        add_money: { 100 => 1, 10 => 1 },
-        return_coins: { 100 => 1, 10 => 1, 5 => 2 }
+        machine_money: { 20 => 1 },
+        return_coins: { 100 => 1, 20 => 1 }
       },
       {
-        price: 70,
-        inserted_coins: [200, 10, 10],
-        add_money: { 20 => 5, 10 => 1 },
-        return_coins: { 20 => 5, 10 => 3, 5 => 4 }
+        price: 90,
+        inserted_coins: [100],
+        machine_money: { 5 => 2 },
+        return_coins: { 5 => 2 }
       },
       {
         price: 164,
         inserted_coins: [200, 100, 50, 50],
-        return_coins: { 200 => 1, 5 => 5, 2 => 3, 1 => 2 }
+        machine_money: { 5 => 10, 2 => 5, 1 => 5 },
+        return_coins: { 200 => 1, 5 => 7, 1 => 1 }
       },
       {
         price: 181,
         inserted_coins: [200, 200],
-        return_coins: { 200 => 1, 5 => 3, 2 => 2 }
+        machine_money: { 5 => 10, 2 => 1, 1 => 5 },
+        return_coins: { 200 => 1, 5 => 3, 2 => 1, 1 => 2 }
       }
     ]
 
     attempts.each do |attempt|
-      it "return correct amount of coins for Item_#{attempt[:price]}" do
+      it "Item_#{attempt[:price]} is return correct amount of coins" do
+        vending_machine.coin_stack.drop!
         vending_machine.add_items([
                                     code: 2, name: "Item_#{attempt[:price]}", quantity: 5, price: attempt[:price]
                                   ])
-        vending_machine.add_money(attempt[:add_money])
+        vending_machine.add_money(attempt[:machine_money])
         attempt[:inserted_coins].each { |coin| vending_machine.insert_coin(coin) }
         return_coins = CoinStack.new(attempt[:return_coins])
 
@@ -183,9 +201,8 @@ RSpec.describe VendingMachine do
           .to eq 'Please take your: Cookies and 5 x 5p + 3 x 2p + 2 x 1p change.'
       end
 
-      it 'leave in in machine is last inserted coin' do
+      it 'leave in machine last inserted coin' do
         vending_machine.purchase(2)
-        # binding.pry
 
         expect(vending_machine.coin_stack.to_h).to eq(200 => 1)
       end
@@ -201,7 +218,8 @@ RSpec.describe VendingMachine do
 
       expect { vending_machine.purchase(1) }
         .to change { vending_machine.inserted_coins.to_h }
-        .from(50 => 1, 20 => 2, 10 => 1).to({})
+        .from(50 => 1, 20 => 2, 10 => 1)
+        .to({})
     end
   end
 end
