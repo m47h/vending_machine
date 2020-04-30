@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative './lib/vending_machine'
+require_relative 'lib/vending_machine'
 
 items = [
   { name: 'Smarties', code: 'A01', quantity: 10, price: 60 },

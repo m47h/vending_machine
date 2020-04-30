@@ -11,6 +11,11 @@ Coke cost 100(£1), Customer insert 200(£2)
   - Worst scenario: VendingMachine got 1p in stock => Customer will purchase Coke and get 1p change.
 Setting THRESHOLD will be good idea.
 
+### Run Simulator
+```tty
+ruby ./vending_machine_simulator.rb
+```
+
 ### Initialize
 
 ```ruby
