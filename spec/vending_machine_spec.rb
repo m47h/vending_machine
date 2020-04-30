@@ -7,26 +7,11 @@ RSpec.describe VendingMachine do
   let(:items) { [{ code: 1, name: 'Snacks', quantity: 5, price: 100 }] }
   let(:vending_machine) { VendingMachine.new(items, money) }
 
-  context '#insert_coin' do
-    it "for nil return 'Coin invalid'" do
-      expect(vending_machine.insert_coin(nil)).to eq 'Coin invalid'
-    end
-
-    it "for invalid coins return 'Coin invalid'" do
-      expect(vending_machine.insert_coin('bad_coin')).to eq 'Coin invalid'
-    end
-
-    it 'valid coin are added to inserted_coins' do
-      vending_machine.insert_coin(1)
-
-      expect(vending_machine.inserted_coins[1]).to eq 1
-    end
-  end
-
   context '#purchase' do
     context 'no inserted coins' do
       it "return 'Please insert coin'" do
-        expect(vending_machine.purchase(1)).to eq 'Please insert coins'
+        expect { vending_machine.purchase(1) }
+          .to raise_error(ArgumentError, 'Please insert coins')
       end
     end
     context 'inserted_money = 50p' do
@@ -35,28 +20,33 @@ RSpec.describe VendingMachine do
       end
 
       it "for nil return 'Invalid selection'" do
-        expect(vending_machine.purchase(nil)).to eq 'Invalid selection!'
+        expect { vending_machine.purchase(nil) }
+          .to raise_error(RangeError, 'Invalid selection!')
       end
 
       it "for invalid code return 'Invalid selection'" do
-        expect(vending_machine.purchase('bad_code')).to eq 'Invalid selection!'
+        expect { vending_machine.purchase('bad_code') }
+          .to raise_error(RangeError, 'Invalid selection!')
       end
 
       it "when not enough money is provided return 'Not enough money!'" do
-        expect(vending_machine.purchase(1)).to eq 'Not enough money!'
+        expect { vending_machine.purchase(1) }
+          .to raise_error(ArgumentError, 'Not enough money!')
       end
 
       it 'item out of stock' do
         items.first[:quantity] = 0
 
-        expect(vending_machine.purchase(1)).to eq "#{items.first[:name]}: Out of stock!"
+        expect { vending_machine.purchase(1) }
+          .to raise_error(RangeError, "#{items.first[:name]}: Out of stock!")
       end
 
       # default 50p + 50
       it 'for valid amount of money it return item' do
         vending_machine.insert_coin(50)
 
-        expect(vending_machine.purchase(1)).to eq "Please take your: #{items.first[:name]}"
+        expect(vending_machine.purchase(1))
+          .to eq success_output(items.first[:name])
       end
 
       it 'when provided amount of money exceed item price it return item and change' do
@@ -64,7 +54,7 @@ RSpec.describe VendingMachine do
         coins.each { |coin| vending_machine.insert_coin(coin) }
 
         expect(vending_machine.purchase(1))
-          .to eq "Please take your: #{items.first[:name]} and 1 x 10p + 1 x 2p + 1 x 1p change."
+          .to eq success_output(items.first[:name], { 10 => 1, 2 => 1, 1 => 1 })
       end
 
       it 'after purchase it saves insert coins into machine stock' do
@@ -79,6 +69,85 @@ RSpec.describe VendingMachine do
         vending_machine.purchase(1)
 
         expect(vending_machine.coin_stack.to_h).to eq(1 => 2, 2 => 3, 5 => 5, 100 => 1)
+      end
+    end
+
+    context 'return correct amount and denomination of coins' do
+      attempts = [
+        {
+          price: 8,
+          inserted_coins: [20],
+          machine_coins: { 5 => 3, 2 => 10, 1 => 5 },
+          return_coins: { 5 => 2, 2 => 1 }
+        },
+        {
+          price: 11,
+          inserted_coins: [20],
+          machine_coins: { 10 => 1, 1 => 10 },
+          return_coins: { 1 => 9 }
+        },
+        {
+          price: 65,
+          inserted_coins: [200],
+          machine_coins: { 20 => 10, 10 => 5, 5 => 5 },
+          return_coins: { 20 => 6, 10 => 1, 5 => 1 }
+        },
+        {
+          price: 80,
+          inserted_coins: [100, 100],
+          machine_coins: { 20 => 1 },
+          return_coins: { 100 => 1, 20 => 1 }
+        },
+        {
+          price: 90,
+          inserted_coins: [100],
+          machine_coins: { 5 => 2 },
+          return_coins: { 5 => 2 }
+        },
+        {
+          price: 164,
+          inserted_coins: [200, 100, 50, 50],
+          machine_coins: { 5 => 10, 2 => 5, 1 => 5 },
+          return_coins: { 200 => 1, 5 => 7, 1 => 1 }
+        },
+        {
+          price: 181,
+          inserted_coins: [200, 200],
+          machine_coins: { 5 => 10, 2 => 1, 1 => 5 },
+          return_coins: { 200 => 1, 5 => 3, 2 => 1, 1 => 2 }
+        }
+      ]
+
+      attempts.each do |attempt|
+        it "for item with price #{attempt[:price]}" do
+          vending_machine.coin_stack.drop!
+          vending_machine.add_items([
+                                      code: 2, name: "Item_#{attempt[:price]}", quantity: 5, price: attempt[:price]
+                                    ])
+          vending_machine.add_money(attempt[:machine_coins])
+          attempt[:inserted_coins].each { |coin| vending_machine.insert_coin(coin) }
+
+          expect(vending_machine.purchase(2))
+            .to eq success_output("Item_#{attempt[:price]}", attempt[:return_coins])
+        end
+      end
+
+      context 'when machine have not enough coins' do
+        before do
+          items << { code: 2, name: 'Cookies', quantity: 5, price: 1 }
+          vending_machine.insert_coin(200)
+        end
+
+        it 'return all coins' do
+          expect(vending_machine.purchase(2))
+            .to eq success_output('Cookies', { 5 => 5, 2 => 3, 1 => 2 })
+        end
+
+        it 'leave in machine last inserted coin' do
+          vending_machine.purchase(2)
+
+          expect(vending_machine.coin_stack.to_h).to eq(200 => 1)
+        end
       end
     end
   end
@@ -129,86 +198,6 @@ RSpec.describe VendingMachine do
     end
   end
 
-  context 'check if #get_return' do
-    attempts = [
-      {
-        price: 8,
-        inserted_coins: [20],
-        machine_money: { 5 => 3, 2 => 10, 1 => 5 },
-        return_coins: { 5 => 2, 2 => 1 }
-      },
-      {
-        price: 11,
-        inserted_coins: [20],
-        machine_money: { 10 => 1, 1 => 10 },
-        return_coins: { 1 => 9 }
-      },
-      {
-        price: 65,
-        inserted_coins: [200],
-        machine_money: { 20 => 10, 10 => 5, 5 => 5 },
-        return_coins: { 20 => 6, 10 => 1, 5 => 1 }
-      },
-      {
-        price: 80,
-        inserted_coins: [100, 100],
-        machine_money: { 20 => 1 },
-        return_coins: { 100 => 1, 20 => 1 }
-      },
-      {
-        price: 90,
-        inserted_coins: [100],
-        machine_money: { 5 => 2 },
-        return_coins: { 5 => 2 }
-      },
-      {
-        price: 164,
-        inserted_coins: [200, 100, 50, 50],
-        machine_money: { 5 => 10, 2 => 5, 1 => 5 },
-        return_coins: { 200 => 1, 5 => 7, 1 => 1 }
-      },
-      {
-        price: 181,
-        inserted_coins: [200, 200],
-        machine_money: { 5 => 10, 2 => 1, 1 => 5 },
-        return_coins: { 200 => 1, 5 => 3, 2 => 1, 1 => 2 }
-      }
-    ]
-
-    attempts.each do |attempt|
-      it "Item_#{attempt[:price]} is return correct amount of coins" do
-        vending_machine.coin_stack.drop!
-        vending_machine.add_items([
-                                    code: 2, name: "Item_#{attempt[:price]}", quantity: 5, price: attempt[:price]
-                                  ])
-        vending_machine.add_money(attempt[:machine_money])
-        attempt[:inserted_coins].each { |coin| vending_machine.insert_coin(coin) }
-        return_coins = CoinStack.new(attempt[:return_coins])
-
-        expect(vending_machine.purchase(2))
-          .to eq "Please take your: Item_#{attempt[:price]} and #{coins_text(return_coins)} change."
-      end
-    end
-
-    context 'when machine have not enough coins' do
-      before do
-        items << { code: 2, name: 'Cookies', quantity: 5, price: 1 }
-        vending_machine.insert_coin(200)
-      end
-
-      it 'return all coins' do
-        expect(vending_machine.purchase(2))
-          .to eq 'Please take your: Cookies and 5 x 5p + 3 x 2p + 2 x 1p change.'
-      end
-
-      it 'leave in machine last inserted coin' do
-        vending_machine.purchase(2)
-
-        expect(vending_machine.coin_stack.to_h).to eq(200 => 1)
-      end
-    end
-  end
-
   context '#save_inserted_coins' do
     it 'reset @inserted_coins' do
       vending_machine.insert_coin(50)
@@ -224,6 +213,10 @@ RSpec.describe VendingMachine do
   end
 end
 
-def coins_text(coins)
-  VendingMachine.new([], []).send :coins_text, coins
+def success_output(item_name, coins = {})
+  VendingMachine.new.send(
+    :display_output,
+    { name: item_name },
+    CoinStack.new(coins)
+  )
 end

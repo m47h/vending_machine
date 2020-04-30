@@ -3,6 +3,8 @@
 require_relative 'coin'
 
 class CoinStack
+  # class QuantityNotPositive < StandardError; end
+
   include Enumerable
   attr_reader :stack, :coin_klass
 
@@ -60,8 +62,8 @@ class CoinStack
   end
 
   def add(denomination, quantity = 1)
-    return 'Please add coins' if quantity.negative?
-    return 'Coin invalid' unless @coin_klass.valid?(denomination)
+    raise ArgumentError, 'Quantity must be positive' unless quantity.positive?
+    raise ArgumentError, 'Coin invalid' unless @coin_klass.valid?(denomination)
 
     if self[denomination]
       self[denomination] + quantity
@@ -105,7 +107,7 @@ class CoinStack
   end
 
   def minimal_coins_to_change(change, coins)
-    return_coins = []
+    return_coins = self.class.new
     min_change = change
     min_return_coins = coins
 
@@ -113,7 +115,7 @@ class CoinStack
       min_return_quantity = minimal_return_quantity(coin, change)
       next if min_return_quantity.zero?
 
-      return_coins << @coin_klass.new(coin.denomination, min_return_quantity)
+      return_coins.add(coin.denomination, min_return_quantity)
       change -= coin.denomination * min_return_quantity
 
       if change < min_change

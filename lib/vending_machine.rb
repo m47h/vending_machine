@@ -7,7 +7,7 @@ class VendingMachine
   include DrawTTY
   attr_reader :items, :coin_stack, :inserted_coins
 
-  def initialize(items, money = {}, coin_stack_klass = CoinStack, coin_klass = Coin)
+  def initialize(items = [], money = {}, coin_stack_klass = CoinStack, coin_klass = Coin)
     @items = items
     @coin_stack = coin_stack_klass.new(money, coin_klass)
     @inserted_coins = coin_stack_klass.new({}, coin_klass)
@@ -22,15 +22,15 @@ class VendingMachine
   end
 
   def purchase(code)
-    code = code.rstrip.chomp if code.is_a? String
-    return 'Please insert coins' if @inserted_coins.empty?
+    raise ArgumentError, 'Please insert coins' if @inserted_coins.empty?
 
+    code = code.rstrip.chomp.upcase if code.is_a? String
     item = items.find { |i| i[:code] == code }
-    return 'Invalid selection!' if item.nil?
-    return "#{item[:name]}: Out of stock!" if item[:quantity].zero?
+    raise RangeError, 'Invalid selection!' if item.nil?
+    raise RangeError, "#{item[:name]}: Out of stock!" if item[:quantity].zero?
 
     change = @inserted_coins.sum - item[:price]
-    return 'Not enough money!' if change.negative?
+    raise ArgumentError, 'Not enough money!' if change.negative?
 
     save_inserted_coins
     return_coins = coin_stack.get_return(change)
@@ -41,7 +41,11 @@ class VendingMachine
 
   def add_money(coins)
     coins&.each do |denomination, quantity|
-      coin_stack.add(denomination, quantity)
+      begin
+        coin_stack.add(denomination, quantity)
+      rescue ArgumentError
+        next
+      end
     end
   end
 
@@ -60,24 +64,29 @@ class VendingMachine
 
   def run
     while true
+      main_box
       output ||= ''
-      main_box { output.to_s }
+      handle_output_message(output) unless output.empty?
       button = gets.rstrip.chomp
 
       output = case button
                when 'I', 'i'
-                 main_box { "Insert coin: #{coin_stack.coin_klass::VALID_DENOMINATION}" }
+                 flash_box("Insert coin:\n#{coin_stack.coin_klass::VALID_DENOMINATION}")
                  action = gets.to_i
                  insert_coin(action)
                when 'B', 'b'
-                 main_box { 'Enter code:' }
+                 flash_box('Enter code:')
                  action = gets
                  purchase(action)
                when 'Q', 'q'
-                 main_box { 'Bye! Bye!' }
+                 flash_box('Bye! Bye!')
                  return
       end
     end
+  rescue ArgumentError, RangeError => e
+    handle_output_message(e)
+    gets
+    run
   end
 
   def items_display
@@ -99,9 +108,9 @@ class VendingMachine
   end
 
   def display_output(item, coins)
-    return "Please take your: #{item[:name]}" if coins.empty?
+    return "Item: #{item[:name]}" if coins.empty?
 
-    "Please take your: #{item[:name]} and #{coins_text(coins)} change."
+    "Item: #{item[:name]}\nChange: #{coins_text(coins)}"
   end
 
   def coins_text(coins)

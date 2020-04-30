@@ -189,4 +189,28 @@ module DrawTTY
       )
     end
   end
+
+  def handle_output_message(output)
+    return flash_box(output.to_s, :warn) if output.is_a? ArgumentError
+    return flash_box(output.to_s, :error) if output.is_a? RangeError
+
+    flash_box(output)
+  end
+
+  FLASH_BOX_WIDTH = 40
+  FLASH_BOX_HEIGHT = 6
+
+  def flash_box(message, mth = :success)
+    print TTY::Box.send(
+      mth,
+      message,
+      {
+        top: TTY::Screen.height / 2 - FLASH_BOX_HEIGHT / 2,
+        left: TTY::Screen.width / 2 - FLASH_BOX_WIDTH / 2,
+        align: :center,
+        width: FLASH_BOX_WIDTH,
+        height: FLASH_BOX_HEIGHT
+      }
+    )
+  end
 end

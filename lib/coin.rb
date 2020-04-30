@@ -21,7 +21,7 @@ class Coin
   end
 
   def -(other)
-    return "There is only #{self}" if quantity < other
+    raise ArgumentError, "There is only #{self}" if quantity < other
 
     @quantity -= other
   end
