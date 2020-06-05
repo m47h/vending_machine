@@ -1,5 +1,7 @@
 # VendingMachine
 
+[![CircleCI](https://circleci.com/gh/m47h/vending_machine.svg?style=shield)](https://circleci.com/gh/m47h/vending_machine)
+
 #### All money/coins denomination as integers (100 = £1, 1 = 1p)
 
 1. Money and Items are ideal candidates for OpenStruct, but i didn't want to over engineer.
